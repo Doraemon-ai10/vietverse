@@ -1,0 +1,12 @@
+{
+  "name": "VietVerse",
+  "short_name": "VietVerse",
+  "description": "VietVerse - game multiplayer phong cach Viet Nam",
+  "start_url": "/game",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#08111f",
+  "theme_color": "#0b6cff",
+  "categories": ["games", "entertainment"]
+}
