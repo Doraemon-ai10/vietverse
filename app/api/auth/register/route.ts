@@ -9,19 +9,17 @@ export async function POST(request: Request) {
     const key = typeof email === 'string' ? email.toLowerCase().trim() : ''
     const name = typeof username === 'string' ? username.trim() : ''
     if (!/^\S+@\S+\.\S+$/.test(key) || !/^[a-zA-Z0-9_]{3,20}$/.test(name) || typeof password !== 'string' || password.length < 8) return NextResponse.json({ error: 'Thông tin đăng ký không hợp lệ.' }, { status: 400 })
-
-    const verified = await dbQuery(`otp_challenges?email=eq.${encodeURIComponent(key)}&verified=eq.true&order=created_at.desc&limit=1`)
-    const challenge = Array.isArray(verified) ? verified[0] : null
+    const verified = await dbQuery(`otp_challenges?select=id,expires_at&email=eq.${encodeURIComponent(key)}&verified=eq.true&order=created_at.desc&limit=1`) as Array<{id:string;expires_at:string}>
+    const challenge = verified?.[0]
     if (!challenge || new Date(challenge.expires_at).getTime() < Date.now()) return NextResponse.json({ error: 'Hãy xác minh OTP trước. Mã xác minh đã hết hạn.' }, { status: 400 })
-
     const rows = await dbQuery(`users?select=id&or=(email.eq.${encodeURIComponent(key)},username.eq.${encodeURIComponent(name)})`)
     if (Array.isArray(rows) && rows.length) return NextResponse.json({ error: 'Email hoặc username đã tồn tại.' }, { status: 409 })
     const { hash, salt } = hashPassword(password)
     const created = await dbQuery('users', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ email: key, username: name, password_hash: hash, password_salt: salt, email_verified: true }) })
     const user = Array.isArray(created) ? created[0] : null
     if (!user?.id) return NextResponse.json({ error: 'Không tạo được tài khoản.' }, { status: 500 })
-    await dbQuery(`otp_challenges?id=eq.${encodeURIComponent(challenge.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ verified: true }) })
-    const response = NextResponse.json({ ok: true, user: { id: user.id, username: name, email: key } })
+    await dbQuery(`otp_challenges?id=eq.${encodeURIComponent(challenge.id)}`, { method: 'DELETE' })
+    const response = NextResponse.json({ ok: true, user: { id: user.id, username: name, email: key, coins: user.coins ?? 1000, xp: user.xp ?? 0, level: user.level ?? 1, avatar: user.avatar ?? 'noob', email_verified: true } })
     response.cookies.set('vv_session', signSession({ id: user.id, username: name }), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 })
     return response
   } catch (e) {
