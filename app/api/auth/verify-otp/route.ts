@@ -1,20 +1,18 @@
 import { NextResponse } from 'next/server'
-import crypto from 'node:crypto'
+import { hashOtp, otpStore } from '@/lib/otp-store'
 
-const otpStore = new Map<string,{hash:string;expires:number;attempts:number}>()
-const hashOtp=(email:string,otp:string)=>crypto.createHash('sha256').update(`${email.toLowerCase()}:${otp}`).digest('hex')
-
-export async function POST(request:Request){
-  try{
-    const {email,otp}=await request.json()
-    if(typeof email!=='string'||typeof otp!=='string'||!/^\d{6}$/.test(otp)) return NextResponse.json({error:'Mã OTP phải gồm 6 số.'},{status:400})
-    const key=email.toLowerCase().trim(), record=otpStore.get(key)
-    if(!record) return NextResponse.json({error:'Mã không tồn tại hoặc đã hết hạn.'},{status:400})
-    if(record.expires<Date.now()){otpStore.delete(key);return NextResponse.json({error:'Mã đã hết hạn.'},{status:400})}
-    record.attempts++
-    if(record.attempts>5){otpStore.delete(key);return NextResponse.json({error:'Bạn đã nhập sai quá nhiều lần.'},{status:429})}
-    if(hashOtp(key,otp)!==record.hash) return NextResponse.json({error:'Mã OTP không đúng.'},{status:400})
+export async function POST(request: Request) {
+  try {
+    const { email, otp } = await request.json()
+    if (typeof email !== 'string' || typeof otp !== 'string' || !/^\d{6}$/.test(otp)) return NextResponse.json({ error: 'Mã OTP phải gồm 6 số.' }, { status: 400 })
+    const key = email.toLowerCase().trim()
+    const record = otpStore.get(key)
+    if (!record) return NextResponse.json({ error: 'Mã không tồn tại hoặc đã hết hạn.' }, { status: 400 })
+    if (record.expires < Date.now()) { otpStore.delete(key); return NextResponse.json({ error: 'Mã đã hết hạn.' }, { status: 400 }) }
+    record.attempts += 1
+    if (record.attempts > 5) { otpStore.delete(key); return NextResponse.json({ error: 'Bạn đã nhập sai quá nhiều lần. Hãy yêu cầu mã mới.' }, { status: 429 }) }
+    if (hashOtp(key, otp) !== record.hash) return NextResponse.json({ error: `Mã OTP không đúng. Còn ${5 - record.attempts} lần thử.` }, { status: 400 })
     otpStore.delete(key)
-    return NextResponse.json({ok:true,verified:true,message:'Email đã được xác minh.'})
-  }catch{return NextResponse.json({error:'Yêu cầu không hợp lệ.'},{status:400})}
+    return NextResponse.json({ ok: true, verified: true, message: 'Email đã được xác minh.' })
+  } catch { return NextResponse.json({ error: 'Yêu cầu không hợp lệ.' }, { status: 400 }) }
 }
