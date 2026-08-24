@@ -1,0 +1,4 @@
+VietVerse deployment trigger
+
+This file intentionally triggers the connected Vercel deployment from main.
+No application behavior is changed.
