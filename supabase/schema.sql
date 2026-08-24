@@ -15,9 +15,18 @@ create table if not exists public.users (
 
 create index if not exists users_email_idx on public.users(lower(email));
 create index if not exists users_username_idx on public.users(lower(username));
-
 alter table public.users enable row level security;
--- Server routes use the Supabase service-role key. Never expose that key in NEXT_PUBLIC_* variables.
+
+create table if not exists public.email_verification_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists email_verification_token_lookup_idx on public.email_verification_tokens(token_hash, used);
+alter table public.email_verification_tokens enable row level security;
 
 create table if not exists public.announcements (
   id uuid primary key default gen_random_uuid(),
@@ -26,3 +35,4 @@ create table if not exists public.announcements (
   expires_at timestamptz,
   created_at timestamptz not null default now()
 );
+alter table public.announcements enable row level security;
