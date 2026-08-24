@@ -24,23 +24,21 @@ export function hashPassword(password: string, salt = crypto.randomBytes(16).toS
   const hash = crypto.scryptSync(password, salt, 64).toString('hex')
   return { hash, salt }
 }
-
 export function verifyPassword(password: string, hash: string, salt: string) {
-  const actual = crypto.scryptSync(password, salt, 64)
-  return crypto.timingSafeEqual(actual, Buffer.from(hash, 'hex'))
+  try { const actual = crypto.scryptSync(password, salt, 64); return actual.length === Buffer.from(hash, 'hex').length && crypto.timingSafeEqual(actual, Buffer.from(hash, 'hex')) } catch { return false }
 }
 
-const sessionSecret = () => process.env.SESSION_SECRET || process.env.RESEND_API_KEY || 'CHANGE_ME_IN_VERCEL'
+const sessionSecret = () => process.env.SESSION_SECRET || ''
 export function signSession(payload: { id: string; username: string }) {
+  const secret = sessionSecret(); if (!secret) throw new Error('SESSION_SECRET_NOT_CONFIGURED')
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const sig = crypto.createHmac('sha256', sessionSecret()).update(body).digest('base64url')
+  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url')
   return `${body}.${sig}`
 }
 export function readSession(value: string | undefined) {
-  if (!value) return null
-  const [body, sig] = value.split('.')
-  if (!body || !sig) return null
-  const expected = crypto.createHmac('sha256', sessionSecret()).update(body).digest('base64url')
+  const secret = sessionSecret(); if (!secret || !value) return null
+  const [body, sig] = value.split('.'); if (!body || !sig) return null
+  const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url')
   if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null
   try { return JSON.parse(Buffer.from(body, 'base64url').toString()) as {id:string;username:string} } catch { return null }
 }
