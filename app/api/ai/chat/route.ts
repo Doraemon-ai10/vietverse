@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { moderateVietnamese } from '../../../../lib/moderation'
+import { GAME_KNOWLEDGE } from '../../../../lib/game-knowledge'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,16 +26,16 @@ export async function POST(request: Request) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        ...(endpoint.includes('openrouter.ai') ? { 'HTTP-Referer': 'https://vietverse.app', 'X-Title': 'VietVerse AI' } : {}),
+        ...(endpoint.includes('openrouter.ai') ? { 'HTTP-Referer': 'https://vietverse1.netlify.app', 'X-Title': 'VietVerse AI' } : {}),
       },
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: 'Bạn là VietVerse AI, trợ lý thân thiện bằng tiếng Việt. Trả lời rõ ràng, hữu ích, ngắn gọn khi câu hỏi đơn giản. Không dùng lời tục tĩu hoặc xúc phạm người khác.' },
+          { role: 'system', content: `Bạn là VietVerse AI, trợ lý hướng dẫn game bằng tiếng Việt. Không dùng lời tục tĩu hoặc xúc phạm. Hãy ưu tiên thông tin trong knowledge base dưới đây. Không bịa rằng tính năng đã hoạt động nếu knowledge base chỉ mô tả mục tiêu. Nếu người chơi hỏi cách chơi, hãy đưa từng bước ngắn gọn.\n\nGAME KNOWLEDGE:\n${GAME_KNOWLEDGE}` },
           ...cleaned,
         ],
-        temperature: 0.7,
-        max_tokens: 800,
+        temperature: 0.5,
+        max_tokens: 900,
       }),
     })
     const data = await upstream.json()
