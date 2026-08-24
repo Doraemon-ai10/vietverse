@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import AIAssistant from './ai-assistant'
 
 export const metadata: Metadata = {
   title: 'VietVerse 🇻🇳',
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="vi"><body>{children}</body></html>
+  return <html lang="vi"><body>{children}<AIAssistant /></body></html>
 }
